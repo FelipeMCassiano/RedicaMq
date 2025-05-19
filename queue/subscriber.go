@@ -45,7 +45,7 @@ func (qs *queueServer) subscribe(w http.ResponseWriter, r *http.Request) error {
 			defer mu.Unlock()
 			closed = true
 			if c != nil {
-				c.Close(websocket.StatusPolicyViolation, "coonection too slow to keep up with messages")
+				c.Close(websocket.StatusPolicyViolation, "conection too slow to keep up with messages")
 			}
 		},
 	}
@@ -82,16 +82,34 @@ func (qs *queueServer) subscribe(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (qs *queueServer) addSubscriber(queueName string, s *subscriber) {
+	qs.messagesMu.Lock()
+	defer qs.messagesMu.Unlock()
+	if msgs, ok := qs.messages[queueName]; ok {
+		var wg sync.WaitGroup
+		defer wg.Wait()
+		for len(msgs) > 0 {
+			select {
+			case msg := <-msgs:
+				send([]*subscriber{s}, msg, &wg)
+			default:
+				break
+			}
+		}
+		if len(msgs) == 0 {
+			delete(qs.messages, queueName)
+		}
+		wg.Wait()
+	}
+
 	qs.susbcriberMu.Lock()
-	defer qs.susbcriberMu.Unlock()
 	qs.queue[queueName] = append(qs.queue[queueName], s)
+	qs.susbcriberMu.Unlock()
 }
 
 func (qs *queueServer) deleteSubscriver(queueName string, s *subscriber) {
 	qs.susbcriberMu.Lock()
-	defer qs.susbcriberMu.Unlock()
-
 	qs.queue[queueName] = deleteFromSubscriberSlice(qs.queue[queueName], s)
+	qs.susbcriberMu.Unlock()
 }
 
 func deleteFromSubscriberSlice(subscribers []*subscriber, s *subscriber) []*subscriber {
@@ -108,4 +126,10 @@ func deleteFromSubscriberSlice(subscribers []*subscriber, s *subscriber) []*subs
 	}
 
 	return subscribers[:i]
+}
+
+func writeTimeout(ctx context.Context, timeout time.Duration, c *websocket.Conn, msg []byte) error {
+	ctx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	return c.Write(ctx, websocket.MessageText, msg)
 }
