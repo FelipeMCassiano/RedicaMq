@@ -2,33 +2,21 @@ package queue
 
 import (
 	"net/http"
-	"sync"
+	"time"
 )
 
 const (
 	bufferSize               = 10_000_000
 	storedMessagesBufferSize = 10_000
+	timeDuration             = 1 * time.Minute
+	janitorCleaning          = timeDuration / 2
 )
 
-type queueServer struct {
-	subscriberMessageBuffer int
-
-	serverMux http.ServeMux
-
-	susbcriberMu sync.RWMutex
-
-	messagesMu         sync.RWMutex
-	messages           map[string]chan []byte
-	messagesBufferSize int
-
-	queue map[string][]*subscriber
-}
-
-func NewQueueServe() *queueServer {
+func NewQueueServer() *queueServer {
 	qs := &queueServer{
 		subscriberMessageBuffer: bufferSize,
 		queue:                   make(map[string][]*subscriber),
-		messages:                make(map[string]chan []byte),
+		messages:                newMessagesBuffer(timeDuration, janitorCleaning),
 		messagesBufferSize:      storedMessagesBufferSize,
 	}
 	qs.serverMux.HandleFunc("/subscribe/{queue}", qs.subscribeHandler)

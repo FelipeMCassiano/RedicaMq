@@ -11,11 +11,6 @@ import (
 	"github.com/coder/websocket"
 )
 
-type subscriber struct {
-	msgs      chan []byte
-	closeSlow func()
-}
-
 func (qs *queueServer) subscribeHandler(w http.ResponseWriter, r *http.Request) {
 	err := qs.subscribe(w, r)
 	if errors.Is(err, context.Canceled) {
@@ -84,19 +79,18 @@ func (qs *queueServer) subscribe(w http.ResponseWriter, r *http.Request) error {
 func (qs *queueServer) addSubscriber(queueName string, s *subscriber) {
 	qs.messagesMu.Lock()
 	defer qs.messagesMu.Unlock()
-	if msgs, ok := qs.messages[queueName]; ok {
+	if queue, ok := qs.messages.queues[queueName]; ok {
 		var wg sync.WaitGroup
 		defer wg.Wait()
-		for len(msgs) > 0 {
-			select {
-			case msg := <-msgs:
+		for len(queue.messages) > 0 {
+			if msg, ok := qs.messages.Pop(queueName); ok {
 				send([]*subscriber{s}, msg, &wg)
-			default:
+			} else {
 				break
 			}
 		}
-		if len(msgs) == 0 {
-			delete(qs.messages, queueName)
+		if len(queue.messages) == 0 {
+			qs.messages.DeleteQueue(queueName)
 		}
 		wg.Wait()
 	}
