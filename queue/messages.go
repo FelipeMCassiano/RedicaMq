@@ -24,23 +24,26 @@ type janitor struct {
 	messages *messagesBuffer
 }
 
-func newMessagesBuffer(ttl, janitorTime time.Duration) *messagesBuffer {
+func newMessagesBuffer(ttl time.Duration, bufferSize int) *messagesBuffer {
 	m := &messagesBuffer{
 		queues:        make(map[string]*queueMessages),
 		expiredQueues: make(map[string]bool),
 		ttl:           ttl,
 		priority:      newMinHeap(),
+		bufferSize:    bufferSize,
 	}
 
-	m.janitor = newJanitor(m, janitorTime)
+	janitorTimer := ttl / 2
+
+	m.janitor = newJanitor(m, janitorTimer)
 	go m.janitor.RunJanitor()
 
 	return m
 }
 
-func newQueueMessage() *queueMessages {
+func newQueueMessage(bufferSize int) *queueMessages {
 	return &queueMessages{
-		messages: make([]*messageTTl, 0),
+		messages: make([]*messageTTl, 0, bufferSize),
 	}
 }
 
@@ -116,7 +119,7 @@ func (m *messagesBuffer) Push(queueName string, data []byte) {
 
 	queue, exists := m.queues[queueName]
 	if !exists {
-		queue = newQueueMessage()
+		queue = newQueueMessage(m.bufferSize)
 		m.queues[queueName] = queue
 	}
 

@@ -5,6 +5,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/FelipeMCassiano/RedicaMq/config"
 	"github.com/FelipeMCassiano/RedicaMq/queue"
 )
 
@@ -13,6 +14,9 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	config.LoadConfig()
+
 	log.Printf("listening on ws://%v", l.Addr())
 	s := &http.Server{
 		Handler: queue.NewQueueServer(),

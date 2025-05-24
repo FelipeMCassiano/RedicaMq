@@ -4,6 +4,8 @@ import (
 	"net/http"
 	"sync"
 	"time"
+
+	"github.com/FelipeMCassiano/RedicaMq/config"
 )
 
 type (
@@ -11,10 +13,11 @@ type (
 		queues        map[string]*queueMessages
 		expiredQueues map[string]bool
 
-		mu       sync.RWMutex
-		ttl      time.Duration
-		janitor  *janitor
-		priority *minHeap
+		mu         sync.RWMutex
+		ttl        time.Duration
+		janitor    *janitor
+		priority   *minHeap
+		bufferSize int
 	}
 	queueServer struct {
 		subscriberMessageBuffer int
@@ -38,12 +41,11 @@ const (
 	janitorCleaning          = timeDuration / 2
 )
 
-func NewQueueServer() *queueServer {
+func NewQueueServer(cfg *config.Config) *queueServer {
 	qs := &queueServer{
-		subscriberMessageBuffer: bufferSize,
+		subscriberMessageBuffer: cfg.Subscriber.BufferSize,
 		queue:                   make(map[string][]*subscriber),
-		messages:                newMessagesBuffer(timeDuration, janitorCleaning),
-		messagesBufferSize:      storedMessagesBufferSize,
+		messages:                newMessagesBuffer(cfg.Messages.TimeToLive, cfg.Messages.BufferSize),
 	}
 	qs.serverMux.HandleFunc("/subscribe/{queue}", qs.subscribeHandler)
 	qs.serverMux.HandleFunc("POST /publish/{queue}", qs.publishHandler)

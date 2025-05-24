@@ -1,0 +1,6 @@
+[Subscriber]
+BufferSize = 10_000_000
+
+[Messages]
+StoredMessagesBufferSize = 10_000
+TimeToLive = "10m"
