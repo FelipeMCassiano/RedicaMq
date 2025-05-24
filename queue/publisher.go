@@ -8,7 +8,9 @@ import (
 
 func (qs *queueServer) publishHandler(w http.ResponseWriter, r *http.Request) {
 	queueName := r.PathValue("queue")
-	body := http.MaxBytesReader(w, r.Body, 8192)
+	body := r.Body
+	defer body.Close()
+
 	msg, err := io.ReadAll(body)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusRequestEntityTooLarge), http.StatusRequestEntityTooLarge)
