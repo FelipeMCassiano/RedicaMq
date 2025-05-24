@@ -15,11 +15,9 @@ func main() {
 		panic(err)
 	}
 
-	config.LoadConfig()
-
 	log.Printf("listening on ws://%v", l.Addr())
 	s := &http.Server{
-		Handler: queue.NewQueueServer(),
+		Handler: queue.NewQueueServer(config.LoadConfig()),
 	}
 
 	errc := make(chan error, 1)
