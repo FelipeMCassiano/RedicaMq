@@ -1,10 +1,28 @@
 package queue
 
 import (
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
 )
+
+type messageTTl struct {
+	ID         string
+	data       []byte
+	expiration time.Time
+	Deleted    bool
+}
+
+type queueMessages struct {
+	messages []*messageTTl
+	mu       sync.RWMutex
+}
+type janitor struct {
+	Interval time.Duration
+	stop     chan bool
+	messages *messagesBuffer
+}
 
 func newMessagesBuffer(ttl, janitorTime time.Duration) *messagesBuffer {
 	m := &messagesBuffer{

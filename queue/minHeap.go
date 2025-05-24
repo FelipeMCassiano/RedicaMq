@@ -1,5 +1,21 @@
 package queue
 
+import (
+	"sync"
+	"time"
+)
+
+type minHeapItem struct {
+	MessageID string
+
+	Expiration time.Time
+	QueueName  string
+}
+type minHeap struct {
+	items []minHeapItem
+	mu    sync.RWMutex
+}
+
 func newMinHeap() *minHeap {
 	return &minHeap{
 		items: make([]minHeapItem, 0),

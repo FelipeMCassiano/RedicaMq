@@ -11,6 +11,11 @@ import (
 	"github.com/coder/websocket"
 )
 
+type subscriber struct {
+	msgs      chan []byte
+	closeSlow func()
+}
+
 func (qs *queueServer) subscribeHandler(w http.ResponseWriter, r *http.Request) {
 	err := qs.subscribe(w, r)
 	if errors.Is(err, context.Canceled) {

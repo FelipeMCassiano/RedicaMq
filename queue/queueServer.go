@@ -2,7 +2,33 @@ package queue
 
 import (
 	"net/http"
+	"sync"
 	"time"
+)
+
+type (
+	messagesBuffer struct {
+		queues        map[string]*queueMessages
+		expiredQueues map[string]bool
+
+		mu       sync.RWMutex
+		ttl      time.Duration
+		janitor  *janitor
+		priority *minHeap
+	}
+	queueServer struct {
+		subscriberMessageBuffer int
+
+		serverMux http.ServeMux
+
+		susbcriberMu sync.RWMutex
+
+		messagesMu         sync.RWMutex
+		messages           *messagesBuffer
+		messagesBufferSize int
+
+		queue map[string][]*subscriber
+	}
 )
 
 const (
